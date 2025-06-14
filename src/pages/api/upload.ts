@@ -21,7 +21,7 @@ export default async function handler(
     const { image, filename } = req.body;
 
     if (!image || !filename) {
-      return res.status(400).json({ error: 'Brak obrazu lub nazwy pliku' });
+      return res.status(400).json({ error: 'Brak wymaganych pól' });
     }
 
     // Konwertuj base64 na Buffer

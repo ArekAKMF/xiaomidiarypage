@@ -1,12 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
-import { ImageData } from '../../lib/supabase';
 
-interface NewsData {
-  title: string;
-  description: string;
-  images: ImageData[];
-}
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,51 +15,37 @@ export default async function handler(
 ) {
   if (req.method === 'GET') {
     try {
-      const { data, error } = await supabase
+      const { data: news, error } = await supabase
         .from('news')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      return res.status(200).json(data);
+      return res.status(200).json(news);
     } catch (error) {
       console.error('Błąd podczas pobierania newsów:', error);
-      return res.status(500).json({ 
-        error: 'Błąd podczas pobierania newsów',
-        details: error instanceof Error ? error.message : 'Nieznany błąd'
-      });
+      return res.status(500).json({ error: 'Błąd podczas pobierania newsów' });
     }
   }
 
   if (req.method === 'POST') {
     try {
-      const { title, description, images } = req.body as NewsData;
+      const { title, description, images, created_at } = req.body;
 
+      // Walidacja danych
       if (!title || !description || !images || !Array.isArray(images)) {
-        return res.status(400).json({ 
-          error: 'Brak wymaganych pól lub nieprawidłowy format danych',
-          details: {
-            title: !title ? 'Brak tytułu' : null,
-            description: !description ? 'Brak opisu' : null,
-            images: !images ? 'Brak obrazów' : !Array.isArray(images) ? 'Nieprawidłowy format obrazów' : null
-          }
-        });
+        return res.status(400).json({ error: 'Brak wymaganych pól' });
       }
 
-      // Sprawdź format każdego obrazu
-      const isValidImageFormat = images.every(img => 
-        img && 
-        typeof img.url === 'string' && 
-        (!img.description || typeof img.description === 'string') &&
-        (!img.location || typeof img.location === 'string')
-      );
-
-      if (!isValidImageFormat) {
-        return res.status(400).json({ 
-          error: 'Nieprawidłowy format danych obrazów',
-          details: 'Każdy obraz musi zawierać pole url, a opcjonalnie description i location'
-        });
+      // Walidacja każdego obrazu
+      for (const image of images) {
+        if (!image.url) {
+          return res.status(400).json({ 
+            error: 'Każdy obraz musi zawierać URL',
+            details: 'Pole url jest wymagane dla każdego obrazu'
+          });
+        }
       }
 
       const { data, error } = await supabase
@@ -68,18 +55,14 @@ export default async function handler(
             title,
             description,
             images,
-            created_at: new Date().toISOString(),
+            created_at
           }
         ])
-        .select()
-        .single();
+        .select();
 
-      if (error) {
-        console.error('Błąd Supabase:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      return res.status(201).json(data);
+      return res.status(201).json(data[0]);
     } catch (error) {
       console.error('Błąd podczas dodawania newsa:', error);
       return res.status(500).json({ 

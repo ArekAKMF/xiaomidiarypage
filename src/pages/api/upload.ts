@@ -19,19 +19,19 @@ export default async function handler(
 
   try {
     const { image, filename } = req.body;
-    
+
     if (!image || !filename) {
-      return res.status(400).json({ error: 'Missing image or filename' });
+      return res.status(400).json({ error: 'Brak obrazu lub nazwy pliku' });
     }
 
-    // Konwertuj base64 na buffer
+    // Konwertuj base64 na Buffer
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
 
     // Generuj unikalną nazwę pliku
     const uniqueFilename = `${Date.now()}-${filename}`;
 
-    // Upload do Vercel Blob Storage
+    // Upload do Vercel Blob
     const blob = await put(uniqueFilename, buffer, {
       access: 'public',
       contentType: 'image/jpeg',
@@ -39,7 +39,10 @@ export default async function handler(
 
     return res.status(200).json({ url: blob.url });
   } catch (error) {
-    console.error('Error uploading image:', error);
-    return res.status(500).json({ error: 'Error uploading image' });
+    console.error('Błąd podczas uploadu:', error);
+    return res.status(500).json({ 
+      error: 'Błąd podczas uploadu obrazu',
+      details: error instanceof Error ? error.message : 'Nieznany błąd'
+    });
   }
 } 

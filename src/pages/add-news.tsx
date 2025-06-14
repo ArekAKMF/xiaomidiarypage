@@ -16,6 +16,7 @@ export default function AddNews() {
   const [description, setDescription] = useState('');
   const [images, setImages] = useState<ImageData[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddImage = () => {
@@ -74,45 +75,70 @@ export default function AddNews() {
     });
   };
 
+  const handleImageUpload = async (file: File): Promise<string> => {
+    try {
+      const reader = new FileReader();
+      
+      return new Promise((resolve, reject) => {
+        reader.onload = async (e) => {
+          try {
+            const base64 = e.target?.result as string;
+            
+            const response = await fetch('/api/upload', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                image: base64,
+                filename: file.name,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.details || errorData.error || 'Błąd podczas uploadu');
+            }
+
+            const data = await response.json();
+            resolve(data.url);
+          } catch (error) {
+            console.error('Błąd podczas przetwarzania obrazu:', error);
+            reject(error);
+          }
+        };
+
+        reader.onerror = () => {
+          reject(new Error('Błąd podczas odczytu pliku'));
+        };
+
+        reader.readAsDataURL(file);
+      });
+    } catch (error) {
+      console.error('Błąd podczas uploadu:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !description || images.length === 0) {
-      alert('Proszę wypełnić wszystkie pola i dodać przynajmniej jedno zdjęcie');
-      return;
-    }
-
     setUploading(true);
+    setError(null);
 
     try {
       const uploadedImages = await Promise.all(
         images.map(async (image) => {
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(image.file);
-          });
-
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              image: base64,
-              filename: image.file.name,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Błąd podczas przesyłania zdjęcia');
+          try {
+            const url = await handleImageUpload(image.file);
+            return {
+              url,
+              description: image.description,
+              location: image.location
+            };
+          } catch (error) {
+            console.error('Błąd podczas uploadu obrazu:', error);
+            throw new Error(`Błąd podczas uploadu obrazu ${image.file.name}: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
           }
-
-          const data = await response.json();
-          return {
-            url: data.url,
-            description: image.description,
-            location: image.location
-          };
         })
       );
 
@@ -125,8 +151,8 @@ export default function AddNews() {
 
       router.push('/');
     } catch (error) {
-      console.error('Błąd:', error);
-      alert('Wystąpił błąd podczas zapisywania newsa');
+      console.error('Błąd podczas zapisywania:', error);
+      setError(error instanceof Error ? error.message : 'Wystąpił nieznany błąd');
     } finally {
       setUploading(false);
     }
@@ -209,6 +235,8 @@ export default function AddNews() {
             </div>
           ))}
         </div>
+
+        {error && <p className={styles.error}>{error}</p>}
 
         <button
           type="submit"

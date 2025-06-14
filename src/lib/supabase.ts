@@ -13,16 +13,17 @@ export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+export interface ImageData {
+  url: string;
+  location: string;
+  description: string;
+}
+
 export interface NewsItem {
   id: string;
   title: string;
   description: string;
-  date: string;
-  images: {
-    url: string;
-    description: string;
-    location?: string;
-  }[];
+  images: ImageData[];
   created_at: string;
 }
 

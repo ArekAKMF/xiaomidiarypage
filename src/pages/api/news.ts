@@ -1,34 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
+import { supabase } from '../../lib/supabase';
 
-const dataFilePath = path.join(process.cwd(), 'src/data/news.json');
-
-interface NewsItem {
-  id: string;
-  title: string;
+interface ImageData {
+  url: string;
+  location: string;
   description: string;
-  date: string;
-  images: {
-    url: string;
-    description: string;
-  }[];
 }
 
-// Funkcja pomocnicza do odczytu danych
-const readData = (): { news: NewsItem[] } => {
-  try {
-    const data = fs.readFileSync(dataFilePath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    return { news: [] };
-  }
-};
-
-// Funkcja pomocnicza do zapisu danych
-const writeData = (data: { news: NewsItem[] }) => {
-  fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2));
-};
+interface NewsData {
+  title: string;
+  description: string;
+  images: ImageData[];
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -36,37 +19,78 @@ export default async function handler(
 ) {
   if (req.method === 'GET') {
     try {
-      const data = readData();
-      return res.status(200).json(data.news);
+      const { data, error } = await supabase
+        .from('news')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return res.status(200).json(data);
     } catch (error) {
-      return res.status(500).json({ error: 'Błąd podczas odczytu danych' });
+      console.error('Błąd podczas pobierania newsów:', error);
+      return res.status(500).json({ 
+        error: 'Błąd podczas pobierania newsów',
+        details: error instanceof Error ? error.message : 'Nieznany błąd'
+      });
     }
   }
 
   if (req.method === 'POST') {
     try {
-      const { title, description, images } = req.body;
-      
-      if (!title || !description) {
-        return res.status(400).json({ error: 'Brak wymaganych pól' });
+      const { title, description, images } = req.body as NewsData;
+
+      if (!title || !description || !images || !Array.isArray(images)) {
+        return res.status(400).json({ 
+          error: 'Brak wymaganych pól lub nieprawidłowy format danych',
+          details: {
+            title: !title ? 'Brak tytułu' : null,
+            description: !description ? 'Brak opisu' : null,
+            images: !images ? 'Brak obrazów' : !Array.isArray(images) ? 'Nieprawidłowy format obrazów' : null
+          }
+        });
       }
 
-      const data = readData();
-      const newNews: NewsItem = {
-        id: Date.now().toString(),
-        title,
-        description,
-        date: new Date().toISOString().split('T')[0],
-        images: images || []
-      };
+      // Sprawdź format każdego obrazu
+      const isValidImageFormat = images.every(img => 
+        img && 
+        typeof img.url === 'string' && 
+        typeof img.location === 'string' && 
+        typeof img.description === 'string'
+      );
 
-      data.news.unshift(newNews); // Dodaj na początek tablicy
-      writeData(data);
+      if (!isValidImageFormat) {
+        return res.status(400).json({ 
+          error: 'Nieprawidłowy format danych obrazów',
+          details: 'Każdy obraz musi zawierać pola: url, location, description'
+        });
+      }
 
-      return res.status(201).json(newNews);
+      const { data, error } = await supabase
+        .from('news')
+        .insert([
+          {
+            title,
+            description,
+            images,
+            created_at: new Date().toISOString(),
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Błąd Supabase:', error);
+        throw error;
+      }
+
+      return res.status(201).json(data);
     } catch (error) {
-      console.error('Błąd podczas zapisywania:', error);
-      return res.status(500).json({ error: 'Błąd podczas zapisywania danych' });
+      console.error('Błąd podczas dodawania newsa:', error);
+      return res.status(500).json({ 
+        error: 'Błąd podczas dodawania newsa',
+        details: error instanceof Error ? error.message : 'Nieznany błąd'
+      });
     }
   }
 

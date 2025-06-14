@@ -24,6 +24,26 @@
   background-color: #1976D2;
 }
 
+.newsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.dateGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dateHeader {
+  font-size: 1.75rem;
+  color: var(--text-color);
+  margin: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--primary-color);
+}
+
 .newsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -42,9 +62,9 @@
   transform: translateY(-4px);
 }
 
-.newsCard h2 {
+.newsCard h3 {
   margin: 0 0 1rem 0;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   color: var(--text-color);
 }
 
@@ -92,7 +112,7 @@
   color: #666;
 }
 
-.date {
+.time {
   font-size: 0.875rem;
   color: #888;
   margin-top: 1rem;
@@ -139,12 +159,6 @@
 
 .newsGroup {
   margin-bottom: 3rem;
-}
-
-.dateHeader {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #eee;
 }
 
 .dateInfo {
@@ -217,30 +231,56 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.9);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  cursor: pointer;
 }
 
 .modalContent {
-  max-width: 90%;
-  max-height: 90vh;
   position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
 .modalImage {
-  width: 100%;
-  height: auto;
+  max-width: 100%;
+  max-height: 80vh;
   object-fit: contain;
+  border-radius: 4px;
+}
+
+.modalInfo {
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  max-width: 80%;
+}
+
+.modalLocation {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.modalDescription {
+  font-size: 1rem;
+  margin: 0;
+  opacity: 0.9;
 }
 
 .modalNavButton {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
   border: none;
   width: 50px;
@@ -251,17 +291,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s;
   z-index: 1001;
 }
 
 .modalNavButton:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.modalNavButton:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+.imageContainer {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.imageContainer:hover {
+  transform: scale(1.02);
 }
 
 .addNewsButton {

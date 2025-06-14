@@ -8,6 +8,8 @@ export default function Home() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -30,6 +32,71 @@ export default function Home() {
     fetchNews();
   }, []);
 
+  const groupNewsByDate = (news: NewsItem[]) => {
+    return news.reduce((groups, item) => {
+      const date = new Date(item.created_at).toLocaleDateString('pl-PL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(item);
+      return groups;
+    }, {} as Record<string, NewsItem[]>);
+  };
+
+  const handleImageClick = (date: string, imageIndex: number) => {
+    setSelectedDate(date);
+    setCurrentImageIndex(imageIndex);
+  };
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedDate) {
+      const imagesForDate = getAllImagesForDate(selectedDate);
+      setCurrentImageIndex((prev) => (prev + 1) % imagesForDate.length);
+    }
+  };
+
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedDate) {
+      const imagesForDate = getAllImagesForDate(selectedDate);
+      setCurrentImageIndex((prev) => (prev - 1 + imagesForDate.length) % imagesForDate.length);
+    }
+  };
+
+  const getAllImagesForDate = (date: string) => {
+    return news
+      .filter(item => new Date(item.created_at).toLocaleDateString('pl-PL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }) === date)
+      .flatMap(item => item.images);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (selectedDate) {
+      if (e.key === 'ArrowRight') {
+        handleNextImage(e as unknown as React.MouseEvent);
+      } else if (e.key === 'ArrowLeft') {
+        handlePrevImage(e as unknown as React.MouseEvent);
+      } else if (e.key === 'Escape') {
+        setSelectedDate(null);
+      }
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedDate]);
+
   if (loading) {
     return <div className={styles.loading}>Ładowanie...</div>;
   }
@@ -37,6 +104,8 @@ export default function Home() {
   if (error) {
     return <div className={styles.error}>{error}</div>;
   }
+
+  const groupedNews = groupNewsByDate(news);
 
   return (
     <div className={styles.container}>
@@ -50,43 +119,103 @@ export default function Home() {
         </button>
       </header>
 
-      <div className={styles.newsGrid}>
-        {news.map((item) => (
-          <div key={item.id} className={styles.newsCard}>
-            <h2>{item.title}</h2>
-            <p>{item.description}</p>
-            <div className={styles.imageGrid}>
-              {item.images.map((image, index) => (
-                <div key={index} className={styles.imageContainer}>
-                  <Image
-                    src={image.url}
-                    alt={image.description || `Zdjęcie ${index + 1}`}
-                    width={300}
-                    height={200}
-                    className={styles.image}
-                    unoptimized={true}
-                  />
-                  {image.location && (
-                    <p className={styles.location}>{image.location}</p>
-                  )}
-                  {image.description && (
-                    <p className={styles.imageDescription}>{image.description}</p>
-                  )}
+      <div className={styles.newsContainer}>
+        {Object.entries(groupedNews).map(([date, items]) => (
+          <div key={date} className={styles.dateGroup}>
+            <h2 className={styles.dateHeader}>{date}</h2>
+            <div className={styles.newsGrid}>
+              {items.map((item) => (
+                <div key={item.id} className={styles.newsCard}>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
+                  <div className={styles.imageGrid}>
+                    {item.images.map((image, index) => {
+                      const allImagesForDate = getAllImagesForDate(date);
+                      const imageIndex = allImagesForDate.findIndex(img => img.url === image.url);
+                      return (
+                        <div 
+                          key={index} 
+                          className={styles.imageContainer}
+                          onClick={() => handleImageClick(date, imageIndex)}
+                        >
+                          <Image
+                            src={image.url}
+                            alt={image.description || `Zdjęcie ${index + 1}`}
+                            width={300}
+                            height={200}
+                            className={styles.image}
+                            unoptimized={true}
+                          />
+                          {image.location && (
+                            <p className={styles.location}>{image.location}</p>
+                          )}
+                          {image.description && (
+                            <p className={styles.imageDescription}>{image.description}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className={styles.time}>
+                    {new Date(item.created_at).toLocaleTimeString('pl-PL', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
                 </div>
               ))}
             </div>
-            <p className={styles.date}>
-              {new Date(item.created_at).toLocaleDateString('pl-PL', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </p>
           </div>
         ))}
       </div>
+
+      {selectedDate && (
+        <div 
+          className={styles.modal}
+          onClick={() => setSelectedDate(null)}
+        >
+          <button 
+            className={styles.modalNavButton}
+            onClick={handlePrevImage}
+            style={{ left: '20px' }}
+          >
+            ‹
+          </button>
+          <div className={styles.modalContent}>
+            {getAllImagesForDate(selectedDate)[currentImageIndex] && (
+              <>
+                <Image
+                  src={getAllImagesForDate(selectedDate)[currentImageIndex].url}
+                  alt={getAllImagesForDate(selectedDate)[currentImageIndex].description || 'Zdjęcie'}
+                  width={800}
+                  height={600}
+                  className={styles.modalImage}
+                  unoptimized={true}
+                />
+                <div className={styles.modalInfo}>
+                  {getAllImagesForDate(selectedDate)[currentImageIndex].location && (
+                    <p className={styles.modalLocation}>
+                      {getAllImagesForDate(selectedDate)[currentImageIndex].location}
+                    </p>
+                  )}
+                  {getAllImagesForDate(selectedDate)[currentImageIndex].description && (
+                    <p className={styles.modalDescription}>
+                      {getAllImagesForDate(selectedDate)[currentImageIndex].description}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+          <button 
+            className={styles.modalNavButton}
+            onClick={handleNextImage}
+            style={{ right: '20px' }}
+          >
+            ›
+          </button>
+        </div>
+      )}
     </div>
   );
 }

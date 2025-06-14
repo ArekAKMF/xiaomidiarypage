@@ -145,6 +145,7 @@ export default function Home() {
                             height={200}
                             className={styles.image}
                             unoptimized={true}
+                            priority={index < 4}
                           />
                           {image.location && (
                             <p className={styles.location}>{image.location}</p>
@@ -191,6 +192,7 @@ export default function Home() {
                   height={600}
                   className={styles.modalImage}
                   unoptimized={true}
+                  priority={true}
                 />
                 <div className={styles.modalInfo}>
                   {getAllImagesForDate(selectedDate)[currentImageIndex].location && (

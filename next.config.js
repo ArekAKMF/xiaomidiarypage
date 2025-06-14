@@ -2,10 +2,17 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: [
-      'vercel.blob.core.windows.net',
-      'ibqc9n0nj8chkrzs.public.blob.vercel-storage.com'
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'vercel.blob.core.windows.net',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.public.blob.vercel-storage.com',
+      }
     ],
+    unoptimized: true,
   },
 }
 

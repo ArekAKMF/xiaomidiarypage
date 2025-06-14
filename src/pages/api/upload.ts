@@ -35,7 +35,12 @@ export default async function handler(
     const blob = await put(uniqueFilename, buffer, {
       access: 'public',
       contentType: 'image/jpeg',
+      addRandomSuffix: true,
     });
+
+    if (!blob.url) {
+      throw new Error('Nie udało się uzyskać URL obrazu');
+    }
 
     return res.status(200).json({ url: blob.url });
   } catch (error) {

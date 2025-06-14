@@ -4,9 +4,6 @@ const nextConfig = {
   images: {
     domains: ['vercel.blob.core.windows.net'],
   },
-  experimental: {
-    appDir: true,
-  },
 }
 
 module.exports = nextConfig 

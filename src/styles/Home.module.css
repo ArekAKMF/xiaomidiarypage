@@ -1,0 +1,202 @@
+.container {
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.logoSection {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 0;
+}
+
+.logoContainer {
+  max-width: 200px;
+}
+
+.newsSection {
+  padding: 2rem 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.newsSection h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+}
+
+.newsGroup {
+  margin-bottom: 3rem;
+}
+
+.dateHeader {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #eee;
+}
+
+.dateInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.dateInfo h3 {
+  font-size: 1.5rem;
+  color: #333;
+  margin: 0;
+  min-width: 200px;
+}
+
+.dateContent {
+  flex: 1;
+}
+
+.dateContent h4 {
+  font-size: 1.2rem;
+  color: #333;
+  margin: 0 0 0.5rem 0;
+}
+
+.dateContent p {
+  font-size: 1rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-size: 1.5rem;
+  color: #666;
+}
+
+.newsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.newsItem {
+  cursor: pointer;
+  transition: transform 0.2s;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.newsItem:hover {
+  transform: scale(1.05);
+}
+
+.thumbnailContainer {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+}
+
+.newsImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.newsContent {
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  max-width: 90%;
+  max-height: 90vh;
+  position: relative;
+}
+
+.modalImage {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.modalNavButton {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  font-size: 2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+  z-index: 1001;
+}
+
+.modalNavButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.modalNavButton:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.addNewsButton {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: #4CAF50;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  margin-top: 1rem;
+}
+
+.addNewsButton:hover {
+  background: #45a049;
+}
+
+.locationInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.locationIcon {
+  font-size: 1rem;
+} 

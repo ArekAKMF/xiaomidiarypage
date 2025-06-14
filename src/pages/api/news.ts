@@ -1,11 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
-
-interface ImageData {
-  url: string;
-  location: string;
-  description: string;
-}
+import { ImageData } from '../../lib/supabase';
 
 interface NewsData {
   title: string;
@@ -55,14 +50,14 @@ export default async function handler(
       const isValidImageFormat = images.every(img => 
         img && 
         typeof img.url === 'string' && 
-        typeof img.location === 'string' && 
-        typeof img.description === 'string'
+        (!img.description || typeof img.description === 'string') &&
+        (!img.location || typeof img.location === 'string')
       );
 
       if (!isValidImageFormat) {
         return res.status(400).json({ 
           error: 'Nieprawidłowy format danych obrazów',
-          details: 'Każdy obraz musi zawierać pola: url, location, description'
+          details: 'Każdy obraz musi zawierać pole url, a opcjonalnie description i location'
         });
       }
 

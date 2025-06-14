@@ -15,8 +15,8 @@ export const supabase = createClient(
 
 export interface ImageData {
   url: string;
-  location: string;
-  description: string;
+  description?: string;
+  location?: string;
 }
 
 export interface NewsItem {

@@ -1,72 +1,35 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import styles from '../styles/AddNews.module.css';
-import { addNews } from '../lib/supabase';
+import { ImageData } from '../lib/supabase';
 
-interface ImageData {
+interface ImageWithFile extends Omit<ImageData, 'url'> {
   file: File;
   preview: string;
-  description: string;
-  location?: string;
 }
 
 export default function AddNews() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [images, setImages] = useState<ImageData[]>([]);
+  const [images, setImages] = useState<ImageWithFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleAddImage = () => {
-    fileInputRef.current?.click();
-  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const newImage = {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newImages = newFiles.map(file => ({
         file,
         preview: URL.createObjectURL(file),
         description: '',
         location: ''
-      };
-      setImages(prev => [...prev, newImage]);
-      // Resetuj input, aby można było wybrać to samo zdjęcie ponownie
-      e.target.value = '';
+      }));
+      setImages(prev => [...prev, ...newImages]);
     }
   };
 
-  const handleDescriptionChange = (index: number, value: string) => {
-    setImages(prev => prev.map((img, i) => 
-      i === index ? { ...img, description: value } : img
-    ));
-  };
-
-  const handleLocationClick = async (index: number) => {
-    if ("geolocation" in navigator) {
-      try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject);
-        });
-        
-        const { latitude, longitude } = position.coords;
-        const location = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-        
-        setImages(prev => prev.map((img, i) => 
-          i === index ? { ...img, location } : img
-        ));
-      } catch (error) {
-        console.error('Błąd podczas pobierania lokalizacji:', error);
-        alert('Nie udało się pobrać lokalizacji. Sprawdź uprawnienia przeglądarki.');
-      }
-    } else {
-      alert('Twoja przeglądarka nie wspiera geolokalizacji.');
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
+  const handleImageRemove = (index: number) => {
     setImages(prev => {
       const newImages = [...prev];
       URL.revokeObjectURL(newImages[index].preview);
@@ -75,49 +38,52 @@ export default function AddNews() {
     });
   };
 
+  const handleImageDescriptionChange = (index: number, value: string) => {
+    setImages(prev => {
+      const newImages = [...prev];
+      newImages[index] = { ...newImages[index], description: value };
+      return newImages;
+    });
+  };
+
+  const handleImageLocationChange = (index: number, value: string) => {
+    setImages(prev => {
+      const newImages = [...prev];
+      newImages[index] = { ...newImages[index], location: value };
+      return newImages;
+    });
+  };
+
   const handleImageUpload = async (file: File): Promise<string> => {
-    try {
-      const reader = new FileReader();
-      
-      return new Promise((resolve, reject) => {
-        reader.onload = async (e) => {
-          try {
-            const base64 = e.target?.result as string;
-            
-            const response = await fetch('/api/upload', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                image: base64,
-                filename: file.name,
-              }),
-            });
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onload = async (e) => {
+        try {
+          const base64 = e.target?.result as string;
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              image: base64,
+              filename: file.name,
+            }),
+          });
 
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.details || errorData.error || 'Błąd podczas uploadu');
-            }
-
-            const data = await response.json();
-            resolve(data.url);
-          } catch (error) {
-            console.error('Błąd podczas przetwarzania obrazu:', error);
-            reject(error);
+          if (!response.ok) {
+            throw new Error('Błąd podczas uploadu obrazu');
           }
-        };
 
-        reader.onerror = () => {
-          reject(new Error('Błąd podczas odczytu pliku'));
-        };
-
-        reader.readAsDataURL(file);
-      });
-    } catch (error) {
-      console.error('Błąd podczas uploadu:', error);
-      throw error;
-    }
+          const data = await response.json();
+          resolve(data.url);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Błąd podczas odczytu pliku'));
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,12 +108,25 @@ export default function AddNews() {
         })
       );
 
-      await addNews({
+      const newsData = {
         title,
         description,
         images: uploadedImages,
-        date: new Date().toISOString()
+        created_at: new Date().toISOString()
+      };
+
+      const response = await fetch('/api/news', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newsData),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Błąd podczas zapisywania newsa');
+      }
 
       router.push('/');
     } catch (error) {
@@ -160,7 +139,8 @@ export default function AddNews() {
 
   return (
     <div className={styles.container}>
-      <h1>Dodaj nowy news</h1>
+      <h1 className={styles.title}>Dodaj nowy wpis</h1>
+      {error && <div className={styles.error}>{error}</div>}
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.formGroup}>
           <label htmlFor="title">Tytuł:</label>
@@ -170,6 +150,7 @@ export default function AddNews() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            className={styles.input}
           />
         </div>
 
@@ -180,6 +161,7 @@ export default function AddNews() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
+            className={styles.textarea}
           />
         </div>
 
@@ -188,62 +170,50 @@ export default function AddNews() {
           <input
             type="file"
             accept="image/*"
+            multiple
             onChange={handleImageChange}
-            ref={fileInputRef}
-            className={styles.hiddenInput}
+            className={styles.fileInput}
           />
-          <button
-            type="button"
-            onClick={handleAddImage}
-            className={styles.addImageButton}
-          >
-            + Dodaj zdjęcie
-          </button>
-        </div>
-
-        <div className={styles.imageGrid}>
-          {images.map((image, index) => (
-            <div key={index} className={styles.imageContainer}>
-              <img
-                src={image.preview}
-                alt={`Podgląd ${index + 1}`}
-                className={styles.preview}
-              />
-              <div className={styles.imageControls}>
+          <div className={styles.imageGrid}>
+            {images.map((image, index) => (
+              <div key={index} className={styles.imageContainer}>
+                <img
+                  src={image.preview}
+                  alt={`Podgląd ${index + 1}`}
+                  className={styles.preview}
+                />
                 <input
                   type="text"
-                  value={image.description}
-                  onChange={(e) => handleDescriptionChange(index, e.target.value)}
                   placeholder="Opis zdjęcia"
-                  className={styles.descriptionInput}
+                  value={image.description}
+                  onChange={(e) => handleImageDescriptionChange(index, e.target.value)}
+                  className={styles.input}
+                />
+                <input
+                  type="text"
+                  placeholder="Lokalizacja"
+                  value={image.location}
+                  onChange={(e) => handleImageLocationChange(index, e.target.value)}
+                  className={styles.input}
                 />
                 <button
                   type="button"
-                  onClick={() => handleLocationClick(index)}
-                  className={styles.locationButton}
-                >
-                  {image.location ? '✓ Lokalizacja dodana' : 'Dodaj lokalizację'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveImage(index)}
+                  onClick={() => handleImageRemove(index)}
                   className={styles.removeButton}
                 >
                   Usuń
                 </button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-
-        {error && <p className={styles.error}>{error}</p>}
 
         <button
           type="submit"
           disabled={uploading}
           className={styles.submitButton}
         >
-          {uploading ? 'Zapisywanie...' : 'Zapisz news'}
+          {uploading ? 'Zapisywanie...' : 'Zapisz'}
         </button>
       </form>
     </div>

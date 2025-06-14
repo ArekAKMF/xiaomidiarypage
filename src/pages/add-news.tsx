@@ -2,11 +2,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import styles from '../styles/AddNews.module.css';
 import { ImageData } from '../lib/supabase';
+import imageCompression from 'browser-image-compression';
 
 interface ImageWithFile extends Omit<ImageData, 'url'> {
   file: File;
   preview: string;
 }
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_WIDTH_OR_HEIGHT = 1920; // maksymalna szerokość lub wysokość
+const COMPRESSION_OPTIONS = {
+  maxSizeMB: 1,
+  maxWidthOrHeight: MAX_WIDTH_OR_HEIGHT,
+  useWebWorker: true,
+  fileType: 'image/jpeg'
+};
 
 export default function AddNews() {
   const router = useRouter();
@@ -16,16 +26,43 @@ export default function AddNews() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = async (file: File): Promise<File> => {
+    try {
+      // Jeśli plik jest mniejszy niż MAX_FILE_SIZE, nie kompresuj
+      if (file.size <= MAX_FILE_SIZE) {
+        return file;
+      }
+
+      const compressedFile = await imageCompression(file, COMPRESSION_OPTIONS);
+      console.log('Oryginalny rozmiar:', file.size / 1024 / 1024, 'MB');
+      console.log('Skompresowany rozmiar:', compressedFile.size / 1024 / 1024, 'MB');
+      return compressedFile;
+    } catch (error) {
+      console.error('Błąd podczas kompresji:', error);
+      throw new Error('Nie udało się skompresować obrazu');
+    }
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      const newImages = newFiles.map(file => ({
-        file,
-        preview: URL.createObjectURL(file),
-        description: '',
-        location: ''
-      }));
-      setImages(prev => [...prev, ...newImages]);
+      try {
+        const newFiles = Array.from(e.target.files);
+        const compressedFiles = await Promise.all(
+          newFiles.map(async (file) => {
+            const compressedFile = await compressImage(file);
+            return {
+              file: compressedFile,
+              preview: URL.createObjectURL(compressedFile),
+              description: '',
+              location: ''
+            };
+          })
+        );
+        setImages(prev => [...prev, ...compressedFiles]);
+      } catch (error) {
+        console.error('Błąd podczas przetwarzania obrazów:', error);
+        setError('Nie udało się przetworzyć obrazów. Spróbuj ponownie.');
+      }
     }
   };
 

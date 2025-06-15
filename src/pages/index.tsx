@@ -110,13 +110,7 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>Newsy</h1>
-        <button 
-          className={styles.addButton}
-          onClick={() => router.push('/add-news')}
-        >
-          Dodaj News
-        </button>
+        <h1>Szary Dziennik</h1>
       </header>
 
       <div className={styles.newsContainer}>

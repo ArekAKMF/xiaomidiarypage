@@ -4,6 +4,21 @@ import Image from 'next/image';
 import styles from '../styles/Home.module.css';
 import { NewsItem } from '../lib/supabase';
 
+const formatDateWithDay = (dateString: string) => {
+  // Parsowanie daty z formatu "DD Miesiąc RRRR"
+  const [day, month, year] = dateString.split(' ');
+  const months = {
+    'stycznia': 0, 'lutego': 1, 'marca': 2, 'kwietnia': 3, 'maja': 4, 'czerwca': 5,
+    'lipca': 6, 'sierpnia': 7, 'września': 8, 'października': 9, 'listopada': 10, 'grudnia': 11
+  };
+  
+  const date = new Date(parseInt(year), months[month as keyof typeof months], parseInt(day));
+  const days = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+  const dayName = days[date.getDay()];
+  
+  return `${dayName}, ${dateString}`;
+};
+
 export default function Home() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,12 +131,10 @@ export default function Home() {
       <div className={styles.newsContainer}>
         {Object.entries(groupedNews).map(([date, items]) => (
           <div key={date} className={styles.dateGroup}>
-            <h2 className={styles.dateHeader}>{date}</h2>
+            <h2 className={styles.dateHeader}>{formatDateWithDay(date)}</h2>
             <div className={styles.newsGrid}>
               {items.map((item) => (
                 <div key={item.id} className={styles.newsCard}>
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
                   <div className={styles.imageGrid}>
                     {item.images.map((image, index) => {
                       const allImagesForDate = getAllImagesForDate(date);
@@ -132,31 +145,37 @@ export default function Home() {
                           className={styles.imageContainer}
                           onClick={() => handleImageClick(date, imageIndex)}
                         >
-                          <Image
-                            src={image.url}
-                            alt={image.description || `Zdjęcie ${index + 1}`}
-                            width={300}
-                            height={200}
-                            className={styles.image}
-                            unoptimized={true}
-                            priority={index < 4}
-                          />
-                          {image.location && (
-                            <p className={styles.location}>{image.location}</p>
-                          )}
-                          {image.description && (
-                            <p className={styles.imageDescription}>{image.description}</p>
-                          )}
+                          <div className={styles.imageWrapper}>
+                            <Image
+                              src={image.url}
+                              alt={image.description || `Zdjęcie ${index + 1}`}
+                              width={300}
+                              height={200}
+                              className={styles.image}
+                              unoptimized={true}
+                              priority={index < 4}
+                            />
+                            <div className={styles.imageInfo}>
+                              <h3 className={styles.newsTitle}>{item.title}</h3>
+                              <p className={styles.newsDescription}>{item.description}</p>
+                              {image.location && (
+                                <p className={styles.location}>{image.location}</p>
+                              )}
+                              {image.description && (
+                                <p className={styles.imageDescription}>{image.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <p className={styles.time}>
+                            {new Date(item.created_at).toLocaleTimeString('pl-PL', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
                         </div>
                       );
                     })}
                   </div>
-                  <p className={styles.time}>
-                    {new Date(item.created_at).toLocaleTimeString('pl-PL', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
                 </div>
               ))}
             </div>
